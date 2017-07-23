@@ -16,8 +16,17 @@ ERR=$?
 # Run system test if unit tests passed
 if [ $ERR -eq 0 ]; then
     IP=$(sudo docker inspect -f {{.NetworkSettings.IPAddress}} jenkins_identidock_1)
-    CODE=$(curl -sL -w "#{http_code}" $IP:9090/monster/bla -o /dev/null) || true
-    if [ $CODE -ne 200 ]; then
+    CODE=$(curl -sL -w "%{http_code}" $IP:9090/monster/bla -o /dev/null) || true
+    if [ $CODE -eq 200 ]; then
+        echo "Test Passed - Tagging"
+        HASH=$(git rev-parse --short HEAD)
+        sudo docker tag -f jenkins_identidock snobutaka/identidock:$HASH
+        sudo docker tag -f jenkins_identidock snobutaka/identidock:newest
+        echo "Pushing"
+        sudo docker login -e $DOCKER_HUB_EMAIL -u $DOCKER_HUB_USER -p $DOCKER_HUB_PASSWD
+        sudo docker push snobutaka/identidock:$HASH
+        sudo docker push snobutaka/identidock:newest
+    else
         echo "Site returned " $CODE
         ERR=1
     fi
